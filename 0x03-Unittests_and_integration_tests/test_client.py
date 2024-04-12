@@ -79,3 +79,42 @@ class TestGithubOrgClient(unittest.TestCase):
         result = github_org_client.has_license(repo, license_key)
 
         self.assertEqual(result, expected_result)
+
+
+@parameterized_class([
+    {"name": "org_payload", "value": org_payload},
+    {"name": "repos_payload", "value": repos_payload},
+    {"name": "expected_repos", "value": expected_repos},
+    {"name": "apache2_repos", "value": apache2_repos}
+])
+class TestIntegrationGithubOrgClient(unittest.TestCase):
+    """Integration test: fixtures"""
+    @classmethod
+    def setUpClass(cls):
+        """return example payloads found in the fixtures."""
+        cls.get_patcher = patch('requests.get')
+        cls.mock_get = cls.get_patcher.start()
+
+        cls.mock_get.side_effect = [
+            MagicMock(json=lambda: cls.org_payload),
+            MagicMock(json=lambda: cls.repos_payload)
+        ]
+
+    @classmethod
+    def tearDownClass(cls):
+        """method to stop the patcher"""
+        cls.get_patcher.stop()
+
+    def test_public_repos(self):
+        """Integration tests"""
+        github_org_client = GithubOrgClient("google")
+        result = github_org_client.public_repos()
+
+        self.assertEqual(result, self.expected_repos)
+
+    def test_public_repos_with_license(self):
+        """test against license"""
+        github_org_client = GithubOrgClient("google")
+        result = github_org_client.public_repos("apache-2.0")
+
+        self.assertEqual(result, self.apache2_repos)
